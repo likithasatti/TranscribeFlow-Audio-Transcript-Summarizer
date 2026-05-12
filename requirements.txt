@@ -2,3 +2,6 @@ streamlit
 openai-whisper
 transformers
 torch
+flask
+gunicorn
+mysql-connector-python
