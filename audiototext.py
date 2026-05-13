@@ -1,8 +1,12 @@
-import whisper
+from faster_whisper import WhisperModel
 
-# Load model once
-model = whisper.load_model("base")
+model = WhisperModel("base")
 
-def transcribe_audio(audio_file):
-    result = model.transcribe(audio_file)
-    return result['text']
+def transcribe_audio(audio_path):
+    segments, info = model.transcribe(audio_path)
+
+    text = ""
+    for segment in segments:
+        text += segment.text + " "
+
+    return text

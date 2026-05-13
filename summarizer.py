@@ -33,30 +33,6 @@
 #     )
 
 #     return summary[0]['summary_text']
-from transformers import pipeline
-
-# Load FLAN-T5 Small model (Good for 8GB RAM)
-summarizer = pipeline(
-    "summarization",
-    model="google/flan-t5-small"
-)
 
 def summarize_text(text):
-    """
-    Takes transcript text as input
-    Returns summarized text
-    """
-
-    # Handle empty text
-    if not text or len(text.strip()) == 0:
-        return "No text available to summarize."
-
-    # Generate summary
-    summary = summarizer(
-        text,
-        max_length=120,     # Maximum summary length
-        min_length=40,      # Minimum summary length
-        do_sample=False     # Deterministic output
-    )
-
-    return summary[0]['summary_text']
+    return text[:500]
