@@ -10,13 +10,17 @@ app = Flask(__name__)
 app.secret_key = "transcribe_project_2026"
 
 # -------- MySQL Connection --------
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Likitha@123",
-    database="login_db"
-)
-cursor = db.cursor()
+try:
+    db = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="YOUR_PASSWORD",
+        database="login_db"
+    )
+    cursor = db.cursor()
+except:
+    db = None
+    cursor = None
 
 # -------- Upload Folder --------
 UPLOAD_FOLDER = "uploads"
@@ -30,6 +34,12 @@ def login():
     error = ""
 
     if request.method == 'POST':
+
+        # Temporary cloud mode without database
+        if cursor is None:
+            session['username'] = request.form['username']
+            return redirect(url_for('upload_page'))
+
         username = request.form['username']
         password = request.form['password']
 
@@ -49,6 +59,11 @@ def login():
 # -------- Register Page --------
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+
+    # Temporary cloud mode
+    if cursor is None:
+        return redirect(url_for('login'))
+
     message = ""
 
     if request.method == 'POST':
