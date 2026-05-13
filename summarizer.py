@@ -34,5 +34,12 @@
 
 #     return summary[0]['summary_text']
 
+# def summarize_text(text):
+#     return text[:500]
 def summarize_text(text):
-    return text[:500]
+
+    sentences = text.split('.')
+
+    summary = '.'.join(sentences[:3])
+
+    return summary

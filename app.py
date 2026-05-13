@@ -4,9 +4,9 @@ import mysql.connector
 import os
 import json
 
-# AI imports temporarily disabled
-# from audiototext import transcribe_audio
-# from summarizer import summarize_text
+# -------- AI Imports --------
+from audiototext import transcribe_audio
+from summarizer import summarize_text
 
 app = Flask(__name__)
 app.secret_key = "transcribe_project_2026"
@@ -37,7 +37,7 @@ def login():
 
     if request.method == 'POST':
 
-        # Temporary cloud mode without database
+        # Cloud mode without database
         if cursor is None:
             session['username'] = request.form['username']
             return redirect(url_for('upload_page'))
@@ -62,7 +62,7 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
 
-    # Temporary cloud mode
+    # Cloud mode without database
     if cursor is None:
         return redirect(url_for('login'))
 
@@ -86,6 +86,7 @@ def register():
 # -------- Upload Page --------
 @app.route('/upload-page')
 def upload_page():
+
     if 'username' not in session:
         return redirect(url_for('login'))
 
@@ -99,19 +100,68 @@ def upload():
     if 'username' not in session:
         return redirect(url_for('login'))
 
+    if 'audio' not in request.files:
+        return "No audio file uploaded"
+
     file = request.files['audio']
+
+    if file.filename == '':
+        return "No selected file"
 
     if file and file.filename.endswith(('.mp3', '.wav')):
 
-        audio_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(audio_path)
+        try:
+            audio_path = os.path.join(UPLOAD_FOLDER, file.filename)
+            file.save(audio_path)
 
-        # Temporary AI replacement
-        transcript_text = "Test transcript"
-        summary_text = "Test summary"
+            # -------- AI Processing --------
+            transcript_text = transcribe_audio(audio_path)
+            summary_text = summarize_text(transcript_text)
 
-        transcript_filename = os.path.splitext(file.filename)[0] + ".txt"
-        summary_filename = "summary_" + os.path.splitext(file.filename)[0] + ".txt"
+            transcript_filename = os.path.splitext(file.filename)[0] + ".txt"
+            summary_filename = "summary_" + os.path.splitext(file.filename)[0] + ".txt"
+
+            with open(os.path.join(UPLOAD_FOLDER, transcript_filename), "w", encoding="utf-8") as f:
+                f.write(transcript_text)
+
+            with open(os.path.join(UPLOAD_FOLDER, summary_filename), "w", encoding="utf-8") as f:
+                f.write(summary_text)
+
+            return render_template(
+                "result.html",
+                transcript=transcript_text,
+                summary=summary_text,
+                transcript_file=transcript_filename,
+                summary_file=summary_filename,
+                source="upload"
+            )
+
+        except Exception as e:
+            return f"Error during AI processing: {str(e)}"
+
+    return "Invalid file format (Only MP3/WAV allowed)"
+
+
+# -------- Record Audio --------
+@app.route('/record', methods=['POST'])
+def record_audio():
+
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        audio_file = request.files['audio']
+
+        filename = f"recorded_{uuid.uuid4().hex}.wav"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        audio_file.save(filepath)
+
+        # -------- AI Processing --------
+        transcript_text = transcribe_audio(filepath)
+        summary_text = summarize_text(transcript_text)
+
+        transcript_filename = filename.replace(".wav", ".txt")
+        summary_filename = "summary_" + transcript_filename
 
         with open(os.path.join(UPLOAD_FOLDER, transcript_filename), "w", encoding="utf-8") as f:
             f.write(transcript_text)
@@ -125,46 +175,11 @@ def upload():
             summary=summary_text,
             transcript_file=transcript_filename,
             summary_file=summary_filename,
-            source="upload"
+            source="record"
         )
 
-    return "Invalid file format (Only MP3/WAV allowed)"
-
-
-# -------- Record Audio --------
-@app.route('/record', methods=['POST'])
-def record_audio():
-
-    if 'username' not in session:
-        return redirect(url_for('login'))
-
-    audio_file = request.files['audio']
-
-    filename = f"recorded_{uuid.uuid4().hex}.wav"
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    audio_file.save(filepath)
-
-    # Temporary AI replacement
-    transcript_text = "Test transcript"
-    summary_text = "Test summary"
-
-    transcript_filename = filename.replace(".wav", ".txt")
-    summary_filename = "summary_" + transcript_filename
-
-    with open(os.path.join(UPLOAD_FOLDER, transcript_filename), "w", encoding="utf-8") as f:
-        f.write(transcript_text)
-
-    with open(os.path.join(UPLOAD_FOLDER, summary_filename), "w", encoding="utf-8") as f:
-        f.write(summary_text)
-
-    return render_template(
-        "result.html",
-        transcript=transcript_text,
-        summary=summary_text,
-        transcript_file=transcript_filename,
-        summary_file=summary_filename,
-        source="record"
-    )
+    except Exception as e:
+        return f"Recording Error: {str(e)}"
 
 
 # -------- Download TXT --------
@@ -233,5 +248,6 @@ def logout():
     return redirect(url_for('login'))
 
 
+# -------- Run App --------
 if __name__ == "__main__":
     app.run(debug=True)

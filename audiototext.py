@@ -1,12 +1,8 @@
 from faster_whisper import WhisperModel
 
-model = None
+model = WhisperModel("tiny")
 
 def transcribe_audio(audio_path):
-    global model
-
-    if model is None:
-        model = WhisperModel("tiny")
 
     segments, info = model.transcribe(audio_path)
 
