@@ -4,40 +4,54 @@ import mysql.connector
 import os
 import json
 
-# -------- AI Imports --------
-from audiototext import transcribe_audio
-from summarizer import summarize_text
-
 app = Flask(__name__)
-app.secret_key = "transcribe_project_2026"
+app.secret_key = os.environ.get("SECRET_KEY", "transcribe_project_2026")
 
-# -------- MySQL Connection --------
-try:
-    db = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="YOUR_PASSWORD",
-        database="login_db"
-    )
-    cursor = db.cursor()
-except:
-    db = None
-    cursor = None
+# ---------------- ENV CONFIG ----------------
+USE_DB = os.environ.get("USE_DB", "false").lower() == "true"
 
-# -------- Upload Folder --------
+db = None
+cursor = None
+
+# ---------------- MYSQL (OPTIONAL) ----------------
+if USE_DB:
+    try:
+        db = mysql.connector.connect(
+            host=os.environ.get("DB_HOST"),
+            user=os.environ.get("DB_USER"),
+            password=os.environ.get("DB_PASSWORD"),
+            database=os.environ.get("DB_NAME")
+        )
+        cursor = db.cursor()
+    except Exception as e:
+        print("DB connection failed:", e)
+        db = None
+        cursor = None
+
+# ---------------- UPLOAD FOLDER ----------------
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
-# -------- Login Page --------
+# ---------------- LAZY AI FUNCTIONS ----------------
+def transcribe(audio_path):
+    from audiototext import transcribe_audio
+    return transcribe_audio(audio_path)
+
+def summarize(text):
+    from summarizer import summarize_text
+    return summarize_text(text)
+
+
+# ---------------- LOGIN ----------------
 @app.route('/', methods=['GET', 'POST'])
 def login():
     error = ""
 
     if request.method == 'POST':
 
-        # Cloud mode without database
+        # Cloud mode (no DB)
         if cursor is None:
             session['username'] = request.form['username']
             return redirect(url_for('upload_page'))
@@ -45,24 +59,27 @@ def login():
         username = request.form['username']
         password = request.form['password']
 
-        query = "SELECT * FROM users WHERE username=%s AND password=%s"
-        cursor.execute(query, (username, password))
-        user = cursor.fetchone()
+        try:
+            query = "SELECT * FROM users WHERE username=%s AND password=%s"
+            cursor.execute(query, (username, password))
+            user = cursor.fetchone()
 
-        if user:
-            session['username'] = username
-            return redirect(url_for('upload_page'))
-        else:
-            error = "Invalid username or password"
+            if user:
+                session['username'] = username
+                return redirect(url_for('upload_page'))
+            else:
+                error = "Invalid username or password"
+
+        except Exception as e:
+            return f"Database error: {str(e)}"
 
     return render_template('login.html', error=error)
 
 
-# -------- Register Page --------
+# ---------------- REGISTER ----------------
 @app.route('/register', methods=['GET', 'POST'])
 def register():
 
-    # Cloud mode without database
     if cursor is None:
         return redirect(url_for('login'))
 
@@ -77,23 +94,22 @@ def register():
             cursor.execute(query, (username, password))
             db.commit()
             return redirect(url_for('login'))
-        except:
-            message = "Username already exists"
+
+        except Exception as e:
+            message = f"Error: {str(e)}"
 
     return render_template('register.html', message=message)
 
 
-# -------- Upload Page --------
+# ---------------- UPLOAD PAGE ----------------
 @app.route('/upload-page')
 def upload_page():
-
     if 'username' not in session:
         return redirect(url_for('login'))
-
     return render_template('upload.html')
 
 
-# -------- Upload File --------
+# ---------------- UPLOAD AUDIO ----------------
 @app.route('/upload', methods=['POST'])
 def upload():
 
@@ -114,9 +130,9 @@ def upload():
             audio_path = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(audio_path)
 
-            # -------- AI Processing --------
-            transcript_text = transcribe_audio(audio_path)
-            summary_text = summarize_text(transcript_text)
+            # -------- AI PROCESSING (SAFE) --------
+            transcript_text = transcribe(audio_path)
+            summary_text = summarize(transcript_text)
 
             transcript_filename = os.path.splitext(file.filename)[0] + ".txt"
             summary_filename = "summary_" + os.path.splitext(file.filename)[0] + ".txt"
@@ -137,12 +153,12 @@ def upload():
             )
 
         except Exception as e:
-            return f"Error during AI processing: {str(e)}"
+            return f"AI Processing Error: {str(e)}"
 
     return "Invalid file format (Only MP3/WAV allowed)"
 
 
-# -------- Record Audio --------
+# ---------------- RECORD AUDIO ----------------
 @app.route('/record', methods=['POST'])
 def record_audio():
 
@@ -156,9 +172,9 @@ def record_audio():
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         audio_file.save(filepath)
 
-        # -------- AI Processing --------
-        transcript_text = transcribe_audio(filepath)
-        summary_text = summarize_text(transcript_text)
+        # -------- AI PROCESSING --------
+        transcript_text = transcribe(filepath)
+        summary_text = summarize(transcript_text)
 
         transcript_filename = filename.replace(".wav", ".txt")
         summary_filename = "summary_" + transcript_filename
@@ -182,7 +198,7 @@ def record_audio():
         return f"Recording Error: {str(e)}"
 
 
-# -------- Download TXT --------
+# ---------------- DOWNLOAD TXT ----------------
 @app.route('/download-combined/<transcript_filename>/<summary_filename>')
 def download_combined(transcript_filename, summary_filename):
 
@@ -211,7 +227,7 @@ def download_combined(transcript_filename, summary_filename):
     return send_file(combined_path, as_attachment=True)
 
 
-# -------- Download JSON --------
+# ---------------- DOWNLOAD JSON ----------------
 @app.route('/download-json/<transcript_filename>/<summary_filename>')
 def download_json(transcript_filename, summary_filename):
 
@@ -241,13 +257,14 @@ def download_json(transcript_filename, summary_filename):
     return send_file(json_path, as_attachment=True)
 
 
-# -------- Logout --------
+# ---------------- LOGOUT ----------------
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
 
-# -------- Run App --------
+# ---------------- RUN (RENDER SAFE) ----------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
