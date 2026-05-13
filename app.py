@@ -3,8 +3,10 @@ import uuid
 import mysql.connector
 import os
 import json
-from audiototext import transcribe_audio
-from summarizer import summarize_text
+
+# AI imports temporarily disabled
+# from audiototext import transcribe_audio
+# from summarizer import summarize_text
 
 app = Flask(__name__)
 app.secret_key = "transcribe_project_2026"
@@ -93,6 +95,7 @@ def upload_page():
 # -------- Upload File --------
 @app.route('/upload', methods=['POST'])
 def upload():
+
     if 'username' not in session:
         return redirect(url_for('login'))
 
@@ -103,8 +106,9 @@ def upload():
         audio_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(audio_path)
 
-        transcript_text = transcribe_audio(audio_path)
-        summary_text = summarize_text(transcript_text)
+        # Temporary AI replacement
+        transcript_text = "Test transcript"
+        summary_text = "Test summary"
 
         transcript_filename = os.path.splitext(file.filename)[0] + ".txt"
         summary_filename = "summary_" + os.path.splitext(file.filename)[0] + ".txt"
@@ -140,8 +144,9 @@ def record_audio():
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     audio_file.save(filepath)
 
-    transcript_text = transcribe_audio(filepath)
-    summary_text = summarize_text(transcript_text)
+    # Temporary AI replacement
+    transcript_text = "Test transcript"
+    summary_text = "Test summary"
 
     transcript_filename = filename.replace(".wav", ".txt")
     summary_filename = "summary_" + transcript_filename
