@@ -86,3 +86,13 @@ Likitha Satti
 
 ⭐ Conclusion
 TranscribeFlow simplifies audio processing by converting speech into text and generating summaries, helping users quickly understand important information and improve productivity.
+
+
+**Screenshots**
+<img width="1369" height="733" alt="Screenshot 2026-06-01 160836" src="https://github.com/user-attachments/assets/ce34b256-5aaa-4e4b-822b-a8e90b8299d3" />
+<img width="1439" height="739" alt="Screenshot 2026-06-01 161014" src="https://github.com/user-attachments/assets/f6f11da7-af62-444a-8229-62e9f994137b" />
+<img width="1487" height="747" alt="Screenshot 2026-06-01 160628" src="https://github.com/user-attachments/assets/f8fde650-9287-4f3e-96af-bce19af41e43" />
+<img width="1497" height="753" alt="Screenshot 2026-06-01 160813" src="https://github.com/user-attachments/assets/1aa908c3-b32f-41f2-b0ad-0af98a1b92e4" />
+
+
+
